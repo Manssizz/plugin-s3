@@ -22,6 +22,7 @@ java {
 repositories {
     mavenCentral()
     maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
@@ -35,7 +36,7 @@ dependencies {
     }
 
     // Image processing dependencies
-    implementation 'com.github.gotson:webp-imageio:0.3.3'
+    implementation 'com.github.gotson.webp-imageio:webp-imageio-core:0.3.3'
 
     testImplementation 'run.halo.app:api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
