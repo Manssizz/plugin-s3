@@ -18,6 +18,7 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
+import com.twelvemonkeys.imageio.plugins.webp.WebPImageWriterSpi;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
