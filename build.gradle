@@ -36,7 +36,7 @@ dependencies {
     }
 
     // Image processing dependencies
-    implementation 'com.twelvemonkeys.imageio:imageio-webp:3.10.1'
+    implementation 'com.github.gotson.webp-imageio:webp-imageio-core:0.3.3'
 
     testImplementation 'run.halo.app:api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
