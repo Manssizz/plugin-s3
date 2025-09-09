@@ -3,9 +3,69 @@ kind: Setting
 metadata:
   name: s3os-settings
 spec:
-  forms: 
+  forms:
     - group: basic
       label: 使用提示
       formSchema:
         - $el: p
           children: 请前往 “附件 - 存储策略” 添加策略
+    - group: imageCompression
+      label: "Image Compression Settings"
+      formSchema:
+        - type: checkbox
+          label: "Enable WebP Image Compression"
+          model: enableWebpCompression
+        - type: group
+          label: "Compression Configuration"
+          visibleOn: enableWebpCompression
+          formSchema:
+            - type: checkbox
+              label: "Convert Header Image"
+              model: convertHeaderImage
+            - type: group
+              label: "Watermark Settings"
+              formSchema:
+                - type: checkbox
+                  label: "Enable PNG Watermark"
+                  model: enablePngWatermark
+                - type: input
+                  label: "Watermark Text"
+                  model: watermarkText
+                  visibleOn: enablePngWatermark
+                - type: input
+                  label: "Watermark Image Path"
+                  model: watermarkImagePath
+                  visibleOn: enablePngWatermark
+                - type: group
+                  label: "Watermark Properties"
+                  formSchema:
+                    - type: input
+                      label: "Transparency"
+                      model: watermarkTransparency
+                    - type: input
+                      label: "Color"
+                      model: watermarkColor
+                    - type: input
+                      label: "Outline"
+                      model: watermarkOutline
+                    - type: input
+                      label: "Size"
+                      model: watermarkSize
+                    - type: select
+                      label: "Position"
+                      model: watermarkPosition
+                      options:
+                        - value: "top-left"
+                          label: "Top Left"
+                        - value: "top-right"
+                          label: "Top Right"
+                        - value: "bottom-left"
+                          label: "Bottom Left"
+                        - value: "bottom-right"
+                          label: "Bottom Right"
+            - type: group
+              label: "WebP Compression Configuration"
+              formSchema:
+                - type: input
+                  label: "Compression Quality (0-100)"
+                  model: webpQuality

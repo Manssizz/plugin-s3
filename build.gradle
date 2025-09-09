@@ -34,6 +34,9 @@ dependencies {
         exclude group: 'commons-logging'
     }
 
+    // Image processing dependencies
+    implementation 'com.github.gotson:webp-imageio:0.3.3'
+
     testImplementation 'run.halo.app:api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'

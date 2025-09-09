@@ -10,6 +10,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.pf4j.Extension;
@@ -291,6 +299,11 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
                 var content = uploadContext.file().content();
 
+                // Process image if compression is enabled
+                if (properties.getEnableWebpCompression() && isImageFile(uploadState.fileName)) {
+                    content = processImageContent(content, uploadState.fileName, properties);
+                }
+
                 return checkFileExistsAndRename(uploadState, client)
                     // init multipart upload
                     .flatMap(state -> Mono.fromCallable(() -> client.createMultipartUpload(
@@ -450,6 +463,115 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         partData.rewind();
 
         return partData;
+    }
+
+    private byte[] processImage(byte[] imageData, String filename, S3OsProperties properties) throws IOException {
+        if (!properties.getEnableWebpCompression()) {
+            return imageData;
+        }
+
+        BufferedImage originalImage = ImageIO.read(new ByteArrayInputStream(imageData));
+        if (originalImage == null) {
+            return imageData; // Not an image
+        }
+
+        BufferedImage processedImage = originalImage;
+
+        // Add watermark if enabled
+        if (properties.getEnablePngWatermark()) {
+            processedImage = addWatermark(originalImage, properties);
+        }
+
+        // Convert to WebP
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ImageWriter writer = ImageIO.getImageWritersByFormatName("webp").next();
+        ImageOutputStream ios = ImageIO.createImageOutputStream(outputStream);
+        writer.setOutput(ios);
+
+        // Set quality
+        var param = writer.getDefaultWriteParam();
+        if (param.canWriteCompressed()) {
+            param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(properties.getWebpQuality() / 100.0f);
+        }
+
+        writer.write(null, new javax.imageio.IIOImage(processedImage, null, null), param);
+        writer.dispose();
+        ios.close();
+
+        return outputStream.toByteArray();
+    }
+
+    private BufferedImage addWatermark(BufferedImage image, S3OsProperties properties) {
+        Graphics2D g2d = image.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Set font
+        int size = Integer.parseInt(properties.getWatermarkSize());
+        Font font = new Font("Arial", Font.BOLD, size);
+        g2d.setFont(font);
+
+        // Set color
+        Color color = Color.decode(properties.getWatermarkColor());
+        float alpha = Float.parseFloat(properties.getWatermarkTransparency());
+        g2d.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 255)));
+
+        // Draw text
+        String text = properties.getWatermarkText();
+        if (text != null && !text.isEmpty()) {
+            FontMetrics fm = g2d.getFontMetrics();
+            int x = 10;
+            int y = image.getHeight() - 10;
+
+            // Position
+            switch (properties.getWatermarkPosition()) {
+                case "top-left":
+                    x = 10;
+                    y = fm.getAscent() + 10;
+                    break;
+                case "top-right":
+                    x = image.getWidth() - fm.stringWidth(text) - 10;
+                    y = fm.getAscent() + 10;
+                    break;
+                case "bottom-left":
+                    x = 10;
+                    y = image.getHeight() - 10;
+                    break;
+                case "bottom-right":
+                    x = image.getWidth() - fm.stringWidth(text) - 10;
+                    y = image.getHeight() - 10;
+                    break;
+            }
+
+            g2d.drawString(text, x, y);
+        }
+
+        g2d.dispose();
+        return image;
+    }
+
+    private boolean isImageFile(String filename) {
+        if (filename == null) return false;
+        String lower = filename.toLowerCase();
+        return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") ||
+               lower.endsWith(".gif") || lower.endsWith(".bmp") || lower.endsWith(".tiff") ||
+               lower.endsWith(".tif") || lower.endsWith(".webp") || lower.endsWith(".svg");
+    }
+
+    private Flux<DataBuffer> processImageContent(Flux<DataBuffer> content, String filename, S3OsProperties properties) {
+        return content.collectList()
+            .map(buffers -> {
+                try {
+                    ByteBuffer buffer = concatBuffers(buffers);
+                    byte[] data = new byte[buffer.remaining()];
+                    buffer.get(data);
+                    byte[] processed = processImage(data, filename, properties);
+                    return DefaultDataBufferFactory.sharedInstance.wrap(processed);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to process image", e);
+                }
+            })
+            .flatMapMany(buffer -> Flux.just(buffer));
     }
 
 

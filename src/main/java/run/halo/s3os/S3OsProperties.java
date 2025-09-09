@@ -52,6 +52,19 @@ public class S3OsProperties {
 
     private String thumbnailParamPattern;
 
+    // Image compression settings
+    private Boolean enableWebpCompression = false;
+    private Boolean convertHeaderImage = false;
+    private Boolean enablePngWatermark = false;
+    private String watermarkText;
+    private String watermarkImagePath;
+    private String watermarkTransparency = "0.5";
+    private String watermarkColor = "#FFFFFF";
+    private String watermarkOutline = "1";
+    private String watermarkSize = "20";
+    private String watermarkPosition = "bottom-right";
+    private Integer webpQuality = 80;
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
